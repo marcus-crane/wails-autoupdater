@@ -1,0 +1,84 @@
+name: Release Wails App (macOS)
+
+on:
+  release:
+    types: [published]
+
+env:
+  BINARY_NAME: wails-autoupdater
+
+jobs:
+  release:
+    name: Release Wails App (macOS)
+    runs-on: macos-latest # We can cross compile but need to be on macOS to notarise
+    strategy:
+      matrix:
+        platform:
+          - darwin/amd64
+          - darwin/arm64
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+
+      - name: Normalise platform tag
+        id: normalise_platform
+        run: |
+          tag=$(echo ${{ matrix.platform }} | sed -e 's/\//-/g')
+          echo "::set-output name=tag::$tag"
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.19
+
+      - name: Install wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Set up Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+
+      - name: Update npm
+        run: npm install -g npm
+
+      - name: Bump manifest version
+        run: node version.js ${{ github.event.release.tag_name }}
+
+      - name: Build frontend assets
+        run: cd frontend && npm install
+
+      - name: Build wails app for macOS
+        run: CGO_ENABLED=1 wails build -platform ${{ matrix.platform }} -ldflags "-X main.version=${{ github.event.release.tag_name }}"
+      
+      - name: Zip up macOS app
+        run: cd build/bin && zip -r $BINARY_NAME-${{ steps.normalise_platform.outputs.tag }}.zip Wails.app
+
+      - name: Get latest release from API
+        uses: octokit/request-action@v2.x
+        id: get_latest_release
+        with:
+          route: GET /repos/{owner}/{repo}/releases
+          owner: marcus-crane
+          repo: $BINARY_NAME
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get release URL
+        id: get_upload_url
+        run: |
+          url=$(echo "$response" | jq -r '.[0].upload_url')
+          echo "::set-output name=url::$url"
+        env:
+          response:  ${{ steps.get_latest_release.outputs.data }}
+
+      - name: Upload zip file
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT_NAME: $BINARY_NAME-${{ steps.normalise_platform.outputs.tag }}
+        with:
+          upload_url:  ${{ steps.get_upload_url.outputs.url }}
+          asset_path: ./build/bin/${{ env.ARTIFACT_NAME }}.zip
+          asset_name: ${{ env.ARTIFACT_NAME }}.zip
+          asset_content_type: application/zip
