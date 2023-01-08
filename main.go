@@ -12,11 +12,10 @@ import (
 var assets embed.FS
 
 // version can be embedded via go tags at compile time
-var version string
+var version = "0.0.0"
 
 func main() {
 	// Create an instance of the app structure
-	version = "1.3.0"
 	app := NewApp(version)
 
 	// Create application with options

@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
+	"log"
+
+	"github.com/marcus-crane/wails-autoupdater/pkg/autoupdater"
 )
 
 // App struct
@@ -35,15 +37,19 @@ func (a *App) Greet(name string) string {
 
 // CheckForUpdate polls Github to see if an update is available
 func (a *App) CheckForUpdate() UpdateStatus {
+	updateAvailable, remoteVersion := autoupdater.CheckForNewerVersion(a.version)
 	return UpdateStatus{
-		UpdateAvailable: true,
-		RemoteVersion:   "2.0.0-alpha1",
+		UpdateAvailable: updateAvailable,
+		RemoteVersion:   remoteVersion,
 	}
 }
 
 func (a *App) PerformUpdate() bool {
-	time.Sleep(time.Second * 3)
-	return true
+	success, err := autoupdater.PerformUpdate(a.version)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return success
 }
 
 func (a *App) GetCurrentVersion() string {

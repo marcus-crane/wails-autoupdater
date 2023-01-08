@@ -64,10 +64,6 @@ window.performUpdate = function(remoteVersion) {
                 if (result) {
                     updaterElement.innerText = `✅ Successfully updated to latest version`
                     versionElement.innerText = `Current version: ${remoteVersion}`
-                    setTimeout(() => {
-                        checkForUpdate()
-                        setCurrentVersion()
-                    }, 5000) // Reset demo after update
                     
                 } else {
                     updaterElement.innerText = `❌ Something went wrong performing update`
