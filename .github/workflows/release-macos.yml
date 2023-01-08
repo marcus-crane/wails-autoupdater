@@ -60,7 +60,7 @@ jobs:
         with:
           route: GET /repos/{owner}/{repo}/releases
           owner: marcus-crane
-          repo: $BINARY_NAME
+          repo: wails-autoupdater
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

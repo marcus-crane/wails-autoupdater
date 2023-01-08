@@ -59,7 +59,7 @@ jobs:
         run: CGO_ENABLED=1 wails build -platform ${{ matrix.platform }} -nsis -ldflags "-X main.version=${{ github.event.release.tag_name }}"
 
       - name: Compress binary
-        run: Compress-Archive %BINARY_NAME%-amd64-installer.exe %BINARY_NAME%-${{ steps.normalise_platform.outputs.tag }}.zip
+        run: Compress-Archive "$env:BINARY_NAME-amd64-installer.exe" "$env:BINARY_NAME-${{ steps.normalise_platform.outputs.tag }}.zip"
         working-directory: ./build/bin
 
       - name: Get latest release from API
@@ -68,7 +68,7 @@ jobs:
         with:
           route: GET /repos/{owner}/{repo}/releases
           owner: marcus-crane
-          repo: $BINARY_NAME
+          repo: wails-autoupdater
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
