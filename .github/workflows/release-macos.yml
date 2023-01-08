@@ -4,9 +4,6 @@ on:
   release:
     types: [published]
 
-env:
-  BINARY_NAME: wails-autoupdater
-
 jobs:
   release:
     name: Release Wails App (macOS)
@@ -52,7 +49,7 @@ jobs:
         run: CGO_ENABLED=1 wails build -platform ${{ matrix.platform }} -ldflags "-X main.version=${{ github.event.release.tag_name }}"
       
       - name: Zip up macOS app
-        run: cd build/bin && zip -r $BINARY_NAME-${{ steps.normalise_platform.outputs.tag }}.zip $BINARY_NAME.app
+        run: cd build/bin && zip -r wails-autoupdater-${{ steps.normalise_platform.outputs.tag }}.zip wails-autoupdater.app
 
       - name: Get latest release from API
         uses: octokit/request-action@v2.x
@@ -76,7 +73,7 @@ jobs:
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ARTIFACT_NAME: $BINARY_NAME-${{ steps.normalise_platform.outputs.tag }}
+          ARTIFACT_NAME: wails-autoupdater-${{ steps.normalise_platform.outputs.tag }}
         with:
           upload_url:  ${{ steps.get_upload_url.outputs.url }}
           asset_path: ./build/bin/${{ env.ARTIFACT_NAME }}.zip
