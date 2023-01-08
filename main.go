@@ -11,9 +11,13 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+// version can be embedded via go tags at compile time
+var version string
+
 func main() {
 	// Create an instance of the app structure
-	app := NewApp()
+	version = "1.3.0"
+	app := NewApp(version)
 
 	// Create application with options
 	err := wails.Run(&options.App{

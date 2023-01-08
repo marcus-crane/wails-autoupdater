@@ -2,7 +2,7 @@ import './style.css';
 import './app.css';
 
 import logo from './assets/images/logo-universal.png';
-import {Greet} from '../wailsjs/go/main/App';
+import {Greet, CheckForUpdate, PerformUpdate, GetCurrentVersion} from '../wailsjs/go/main/App';
 
 document.querySelector('#app').innerHTML = `
     <img id="logo" class="logo">
@@ -11,6 +11,8 @@ document.querySelector('#app').innerHTML = `
         <input class="input" id="name" type="text" autocomplete="off" />
         <button class="btn" onclick="greet()">Greet</button>
       </div>
+      <p class="btn" id="updater">Checking for updates...</p>
+      <p id="version"></p>
     </div>
 `;
 document.getElementById('logo').src = logo;
@@ -18,6 +20,68 @@ document.getElementById('logo').src = logo;
 let nameElement = document.getElementById("name");
 nameElement.focus();
 let resultElement = document.getElementById("result");
+let updaterElement = document.getElementById("updater");
+let versionElement = document.getElementById("version");
+
+window.setCurrentVersion = function() {
+    GetCurrentVersion().then(res => {
+        console.log(res)
+        versionElement.innerText = `Current version: ${res}`
+    })
+}
+
+setCurrentVersion()
+
+window.checkForUpdate = function() {
+    try {
+        CheckForUpdate()
+            .then((result) => {
+                if (result.update_available) {
+                    updaterElement.innerText = `🎉 Click to update to v${result.remote_version}`
+                    updaterElement.onclick = () => window.performUpdate(result.remote_version)
+                } else {
+                    updaterElement.innerText = `💾 You are running on the latest version of this app`
+                }
+                console.log(result)
+            })
+            .catch((err) => {
+                updaterElement.innerText = `❌ Something went wrong checking for updates`
+                console.log(err);
+            });
+    } catch (err) {
+        updaterElement.innerText = `❌ Something went wrong checking for updates`
+        console.log(err)
+    }
+}
+
+window.performUpdate = function(remoteVersion) {
+    console.log(remoteVersion)
+    updaterElement.innerText = `🏃‍♀️ Fetching update...`
+    updaterElement.onclick = null
+    try {
+        PerformUpdate()
+            .then((result) => {
+                if (result) {
+                    updaterElement.innerText = `✅ Successfully updated to latest version`
+                    versionElement.innerText = `Current version: ${remoteVersion}`
+                    setTimeout(() => {
+                        checkForUpdate()
+                        setCurrentVersion()
+                    }, 5000) // Reset demo after update
+                    
+                } else {
+                    updaterElement.innerText = `❌ Something went wrong performing update`
+                }
+            })
+            .catch((err) => {
+                updaterElement.innerText = `❌ Something went wrong performing update`
+                console.error(err);
+            });
+    } catch (err) {
+        updaterElement.innerText = `❌ Something went wrong performing update`
+        console.log(err);
+    }
+};
 
 // Setup the greet function
 window.greet = function () {
@@ -41,3 +105,6 @@ window.greet = function () {
         console.error(err);
     }
 };
+
+// Check for updates on startup
+window.checkForUpdate()
