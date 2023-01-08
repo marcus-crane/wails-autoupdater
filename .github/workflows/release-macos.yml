@@ -52,7 +52,7 @@ jobs:
         run: CGO_ENABLED=1 wails build -platform ${{ matrix.platform }} -ldflags "-X main.version=${{ github.event.release.tag_name }}"
       
       - name: Zip up macOS app
-        run: cd build/bin && zip -r $BINARY_NAME-${{ steps.normalise_platform.outputs.tag }}.zip Wails.app
+        run: cd build/bin && zip -r $BINARY_NAME-${{ steps.normalise_platform.outputs.tag }}.zip $BINARY_NAME.app
 
       - name: Get latest release from API
         uses: octokit/request-action@v2.x
