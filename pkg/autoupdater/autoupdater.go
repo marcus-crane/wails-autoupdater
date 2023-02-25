@@ -3,15 +3,17 @@ package autoupdater
 import (
 	"archive/zip"
 	"fmt"
-	"github.com/blang/semver"
-	"github.com/rhysd/go-github-selfupdate/selfupdate"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
+
+	"github.com/blang/semver"
+	"github.com/rhysd/go-github-selfupdate/selfupdate"
 )
 
 const (
@@ -119,21 +121,37 @@ func PerformUpdateWindows() (bool, error) {
 }
 
 func CleanupOldDarwinApp() error {
-	cmdPath, err := os.Executable()
-	if err != nil {
-		return err
-	}
-	installPath := strings.TrimSuffix(cmdPath, fmt.Sprintf("%s.app/Contents/MacOS/%s", ExecutableName, ExecutableName))
-	oldAppLocation := filepath.Join(installPath, fmt.Sprintf("%s_old.app", ExecutableName))
+	oldAppLocation := filepath.Join("/tmp", fmt.Sprintf("%s.app", ExecutableName))
 	if _, err := os.Stat(oldAppLocation); !os.IsNotExist(err) {
-		if err = exec.Command("rm", oldAppLocation).Run(); err != nil {
+		if err = exec.Command("rm", "-rf", oldAppLocation).Run(); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+func RestartDarwinApp() error {
+	pid := strconv.Itoa(os.Getpid())
+	installPath := filepath.Join("/Applications/", fmt.Sprintf("%s.app", ExecutableName))
+
+	if err := exec.Command("open", installPath).Run(); err != nil {
+		return err
+	}
+
+	if err := exec.Command("kill", "-3", pid).Run(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func PerformUpdateDarwin() (bool, error) {
+	f, err := os.OpenFile("/Users/marcus/Desktop/test.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatal("failed to create file")
+	}
+	defer f.Close()
+	log.SetOutput(f)
 	downloadPath, err := downloadLatestVersion()
 	if err != nil {
 		return false, err
@@ -150,37 +168,31 @@ func PerformUpdateDarwin() (bool, error) {
 	}
 	log.Printf("Going to install to %s", installPath)
 
-	oldAppLocation := filepath.Join(installPath, fmt.Sprintf("%s_old.app", ExecutableName))
-	newAppLocation := filepath.Join(installPath, fmt.Sprintf("%s.app", ExecutableName))
+	appLocation := filepath.Join(installPath, fmt.Sprintf("%s.app", ExecutableName))
 	dlAppLocation := strings.Replace(downloadPath, ".zip", ".app", -1)
 
-	if err := exec.Command("mv", newAppLocation, oldAppLocation).Run(); err != nil {
-		exec.Command("mv", oldAppLocation, newAppLocation).Run()
-		return false, fmt.Errorf("failed to swap existing application with new one")
+	if err := CleanupOldDarwinApp(); err != nil {
+		log.Printf("Failed to clean up old darwin app")
+		return false, err
 	}
 
-	if err := exec.Command("mv", dlAppLocation, newAppLocation).Run(); err != nil {
-		exec.Command("mv", oldAppLocation, newAppLocation)
+	if err := exec.Command("mv", appLocation, fmt.Sprintf("/tmp/%s.app", ExecutableName)).Run(); err != nil {
+		log.Printf("Failed to mv %s to /tmp: %+v", appLocation, err)
+		return false, err
 	}
 
-	if err := exec.Command("rm", downloadPath).Run(); err != nil {
-		// LOG: Failed to cleanup tmp folder
-		log.Print(err)
+	if err := exec.Command("mv", dlAppLocation, appLocation).Run(); err != nil {
+		log.Printf("Failed to run mv %s %s: %+v", dlAppLocation, appLocation, err)
 		return false, err
 	}
 
 	if err := exec.Command("rm", downloadPath).Run(); err != nil {
 		// LOG: Failed to cleanup tmp folder
-		log.Print(err)
+		log.Printf("Failed to rm %s: %+v", downloadPath, err)
 		return false, err
 	}
 
-	if err := exec.Command("open", newAppLocation).Run(); err != nil {
-		log.Print(err)
-		return false, err
-	}
-
-	os.Exit(0) // We now close so that the attention is focused on the new version which we just installed
+	log.Println("Successfully updated")
 
 	return true, nil
 }

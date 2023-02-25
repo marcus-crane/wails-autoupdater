@@ -26,7 +26,7 @@ let versionElement = document.getElementById("version");
 window.setCurrentVersion = function() {
     GetCurrentVersion().then(res => {
         console.log(res)
-        versionElement.innerText = `Current version: ${res}`
+        versionElement.innerText = `Current version: v${res}`
     })
 }
 
@@ -62,8 +62,8 @@ window.performUpdate = function(remoteVersion) {
         PerformUpdate()
             .then((result) => {
                 if (result) {
-                    updaterElement.innerText = `✅ Successfully updated to latest version`
-                    versionElement.innerText = `Current version: ${remoteVersion}`
+                    updaterElement.innerText = `✅ Successfully downloaded v${remoteVersion}`
+                    versionElement.innerText = `Please exit and restart the app to start using the latest version`
                     
                 } else {
                     updaterElement.innerText = `❌ Something went wrong performing update`
